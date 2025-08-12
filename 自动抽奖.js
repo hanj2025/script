@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         自动抽奖
+// @name         自动操作脚本
 // @namespace    http://tampermonkey.net/
-// @version      0.2
-// @description  不告诉你，自己研究
+// @version      0.3
+// @description  在指定页面添加自动操作按钮，执行一系列点击、表格提取和企业比对操作
 // @author       You
 // @match        http*://scjg.hubei.gov.cn/hbssj/meta/HBSSJ/analyses/CSTM-17956/*
 // @grant        none
@@ -130,7 +130,7 @@
 
     // 创建执行按钮
     const execButton = document.createElement('button');
-    execButton.textContent = '自动抽奖';
+    execButton.textContent = '自动操作';
     execButton.style.position = 'fixed';
     execButton.style.top = '10px';
     execButton.style.left = '10px';
@@ -158,12 +158,12 @@
         while (shouldContinue) {
             try {
                 // 步骤1: 点击按钮1
-                console.log('步骤1: 点击抽奖按钮');
+                console.log('步骤1: 点击重新摇号按钮');
                 const button1 = document.evaluate('//*[@id="tsk4_btn_cxyh"]', document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
                 if (button1) {
                     button1.click();
                 } else {
-                    throw new Error('未找到按钮1');
+                    throw new Error('未找到重新摇号按钮');
                 }
 
                 // 等待25秒
@@ -171,25 +171,25 @@
                 await new Promise(resolve => setTimeout(resolve, 25000));
 
                 // 步骤2: 点击按钮2
-                console.log('步骤2: 点击第一个弹窗确认按钮');
+                console.log('步骤2: 点击第一个确认按钮');
                 const button2 = document.evaluate('//*[@id="ok"]/button', document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
                 if (button2) {
                     button2.click();
                 } else {
-                    throw new Error('未找到按钮2');
+                    throw new Error('未找到第一个确认按钮');
                 }
 
                 // 等待3秒
                 console.log('等待3秒...');
                 await new Promise(resolve => setTimeout(resolve, 3000));
 
-                // 步骤3: 点击按钮3,注意此处的xpath会变化
-                console.log('步骤3: 点击第二个弹窗确认按钮');
+                // 步骤3: 点击按钮3
+                console.log('步骤3: 点击第二个确认按钮');
                 const button3 = document.evaluate('/html/body/div[4]/div/div/div[3]/div[1]/div[1]/span[1]/button', document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
                 if (button3) {
                     button3.click();
                 } else {
-                    throw new Error('未找到按钮3');
+                    throw new Error('未找到第二个确认按钮');
                 }
 
                 // 等待30秒
@@ -252,7 +252,7 @@
                         }
                     });
 
-                    console.log('处理后的表格内容(对象名称和统一社会信用代码/其他证号):');
+                    console.log('展示抽取结果(对象名称丨统一社会信用代码):');
                     console.table(tableData);
 
                     // 打印匹配结果
@@ -266,13 +266,25 @@
                     }
 
                     // 检查是否达到停止条件
-                    if (matchedCompanies.length >= 5) {
-                        console.log('匹配企业数量达到或超过5个，程序停止运行');
+                    if (matchedCompanies.length >= 4) {
+                        // 点击"对象配发"按钮
+                        const button4 = document.evaluate('//*[@id="tsk4_btn_end"]', document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+                        if (button4) {
+                            console.log('达到阈值:4,点击"对象配发"按钮');
+                            button4.click();
+                        } else {
+                            console.error('未找到"对象配发"按钮');
+                        }
+
+                        console.log('程序已终止');
                         shouldContinue = false;
                         return;
+                    } else {
+                        console.log('未达到阈值:4,继续抽取');
                     }
+
                 } else {
-                    throw new Error('未找到表格内容');
+                    throw new Error('未找到抽取内容');
                 }
 
                 console.log('当前循环执行完毕');
@@ -291,6 +303,6 @@
         }
     }
 
-    console.log('自动抽奖脚本已加载，点击左上角按钮开始执行');
+    console.log('自动操作脚本已加载，点击页面左上角按钮开始执行');
 })();
 
