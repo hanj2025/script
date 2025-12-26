@@ -1,0 +1,1313 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>投资项目处理工具</title>
+    <!-- 添加SheetJS库用于生成Excel文件 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        /* 全局样式重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+
+        h1 {
+            text-align: center;
+            color: #2d3748;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .controls {
+            margin: 20px 0 30px;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(72, 187, 120, 0.3);
+            min-width: 140px;
+        }
+
+        button:hover:not(:disabled) {
+            background: linear-gradient(135deg, #38a169 0%, #2f855a 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(72, 187, 120, 0.4);
+        }
+
+        button:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: #e2e8f0;
+            color: #a0aec0;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+
+        #status {
+            margin: 20px 0;
+            padding: 12px 16px;
+            border-radius: 8px;
+            background-color: #f7fafc;
+            border-left: 4px solid #48bb78;
+            font-size: 14px;
+            font-weight: 500;
+            color: #4a5568;
+            transition: all 0.3s ease;
+        }
+
+        .progress-container {
+            margin: 20px 0;
+            display: none;
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 28px;
+            background-color: #e2e8f0;
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #48bb78 0%, #38a169 100%);
+            width: 0%;
+            transition: width 0.5s ease-in-out;
+            border-radius: 14px;
+            box-shadow: 0 0 12px rgba(72, 187, 120, 0.5);
+            position: relative;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            animation: progressShine 1.5s infinite;
+        }
+
+        @keyframes progressShine {
+            0% {
+                transform: translateX(-100%);
+            }
+
+            100% {
+                transform: translateX(100%);
+            }
+        }
+
+        .progress-text {
+            margin-top: 10px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .progress-percentage {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+            z-index: 1;
+        }
+
+        .filter-section {
+            margin: 30px 0;
+            padding: 25px;
+            background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .filter-section h3 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-size: 20px;
+            font-weight: 700;
+            color: #2d3748;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .filter-section h3::before {
+            content: "🔍";
+            font-size: 22px;
+        }
+
+        .filter-row {
+            margin: 15px 0;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .filter-row:first-of-type {
+            margin-top: 0;
+        }
+
+        .filter-row:last-of-type {
+            margin-bottom: 0;
+        }
+
+        .filter-row label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #4a5568;
+            min-width: 120px;
+        }
+
+        .filter-row input[type="file"] {
+            padding: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            background-color: white;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .filter-row input[type="file"]:hover {
+            border-color: #48bb78;
+            box-shadow: 0 0 0 3px rgba(72, 187, 120, 0.1);
+        }
+
+        .filter-row input[type="number"] {
+            padding: 10px 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            width: 160px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            background-color: white;
+        }
+
+        .filter-row input[type="number"]:focus {
+            outline: none;
+            border-color: #48bb78;
+            box-shadow: 0 0 0 3px rgba(72, 187, 120, 0.1);
+        }
+
+        .file-list {
+            margin: 30px 0;
+            max-height: 350px;
+            overflow-y: auto;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            background-color: #f7fafc;
+            transition: all 0.3s ease;
+        }
+
+        .file-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid #e2e8f0;
+            transition: all 0.2s ease;
+            font-size: 14px;
+            color: #4a5568;
+            cursor: pointer;
+        }
+
+        .file-item:hover {
+            background-color: #edf2f7;
+            transform: translateX(4px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .file-item:last-child {
+            border-bottom: none;
+        }
+
+        .file-item-empty {
+            padding: 20px;
+            text-align: center;
+            color: #a0aec0;
+            font-style: italic;
+        }
+
+        /* 页面加载动画 */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(72, 187, 120, 0.3);
+            border-radius: 50%;
+            border-top-color: #48bb78;
+            animation: spin 1s ease-in-out infinite;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* 成功提示样式 */
+        .success {
+            color: #38a169;
+            font-weight: 600;
+        }
+
+        /* 错误提示样式 */
+        .error {
+            color: #f56565;
+            font-weight: 600;
+        }
+
+        /* 信息提示样式 */
+        .info {
+            color: #4299e1;
+            font-weight: 600;
+        }
+
+        /* 滚动条样式 */
+        .file-list::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .file-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .file-list::-webkit-scrollbar-thumb {
+            background: #cbd5e0;
+            border-radius: 4px;
+        }
+
+        .file-list::-webkit-scrollbar-thumb:hover {
+            background: #a0aec0;
+        }
+
+        /* 投资文件格式说明样式 */
+        .format-guide {
+            margin-bottom: 20px;
+            padding: 18px;
+            background-color: white;
+            border: 2px solid #e6fffa;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #f0fff4 0%, #e6fffa 100%);
+        }
+
+        .format-guide h4 {
+            color: #2f855a;
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .format-guide h4::before {
+            content: "📋";
+            font-size: 18px;
+        }
+
+        .format-guide p {
+            font-size: 14px;
+            color: #4a5568;
+            margin-bottom: 10px;
+        }
+
+        .format-guide ul {
+            list-style-type: none;
+            padding-left: 0;
+            margin-bottom: 15px;
+        }
+
+        .format-guide li {
+            font-size: 14px;
+            color: #4a5568;
+            margin-bottom: 8px;
+            padding-left: 24px;
+            position: relative;
+        }
+
+        .format-guide li::before {
+            content: "✅";
+            position: absolute;
+            left: 0;
+            top: 0;
+            color: #48bb78;
+        }
+
+        .format-example {
+            margin-top: 15px;
+            background-color: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .format-example table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .format-example th {
+            background-color: #f7fafc;
+            padding: 10px;
+            text-align: left;
+            font-weight: 600;
+            color: #2d3748;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .format-example td {
+            padding: 10px;
+            color: #4a5568;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .format-example tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            body {
+                padding: 15px;
+            }
+
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            button {
+                width: 100%;
+                max-width: 300px;
+            }
+
+            .filter-row {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .filter-row label {
+                min-width: auto;
+            }
+
+            .filter-row input[type="number"] {
+                width: 100%;
+            }
+        }
+
+        /* 动画效果 */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .container {
+            animation: fadeIn 0.5s ease-out;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>投资项目处理工具</h1>
+        <div class="controls">
+            <button id="selectDir">选择目录</button>
+            <button id="processFiles" disabled>复制文件</button>
+            <button id="regenerateList" disabled>生成列表</button>
+        </div>
+        <div id="status"></div>
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar">
+                <div class="progress-percentage" id="progressPercentage">0%</div>
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-text" id="progressText"></div>
+        </div>
+        <div class="filter-section">
+            <h3>按投资额筛选文件</h3>
+            <div class="format-guide">
+                <h4>投资额文件格式要求</h4>
+                <ul>
+                    <li>文件格式：.xlsx 或 .xls</li>
+                    <li>看示例👇</li>
+                </ul>
+                <div class="format-example">
+                    <table>
+                        <tr>
+                            <th>项目代码</th>
+                            <th>本月新增建安</th>
+                            <th>本月新增设备工器具</th>
+                            <th>本月新增其他</th>
+                        </tr>
+                        <tr>
+                            <td>MA4F0WYH0420582003</td>
+                            <td>5000</td>
+                            <td>2000</td>
+                            <td>1000</td>
+                        </tr>
+
+                    </table>
+                </div>
+            </div>
+            <div class="filter-row">
+                <label for="investmentFile">上传投资额文件：</label>
+                <input type="file" id="investmentFile" accept=".xlsx,.xls">
+            </div>
+            <div class="filter-row">
+                <label>投资额（万元）：</label>
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 5px;">
+                        <span>≥</span>
+                        <input type="number" id="investmentValue" placeholder="输入数值" value="5000"
+                            style="padding: 10px 12px; border: 2px solid #e2e8f0; border-radius: 8px; width: 120px; font-size: 14px;">
+                    </div>
+                </div>
+            </div>
+            <div class="filter-row">
+                <button id="filterFiles" disabled>按投资额筛选</button>
+                <button id="generateUnlockFormula" disabled style="margin-left: 10px;">生成解锁公式</button>
+            </div>
+        </div>
+        <div class="file-list" id="fileList"></div>
+
+    </div>
+
+    <script>
+        let selectedFiles = [];
+        let selectedDirectory = '';
+        let rootDirectoryHandle = null;
+        let investmentData = new Map(); // 存储项目代码到投资额的映射
+        let uploadedInvestmentFile = null;
+
+        // 文件上传事件处理
+        document.getElementById('investmentFile').addEventListener('change', async (event) => {
+            console.log('📋 [投资额上传] === 开始上传投资额文件 ===');
+            const file = event.target.files[0];
+            if (!file) {
+                console.log('⚠ 未选择文件，取消上传');
+                return;
+            }
+
+            console.log('📁 选择的文件：', file.name, '（大小：', file.size, '字节）');
+
+            // 检查文件格式
+            const fileExtension = file.name.split('.').pop().toLowerCase();
+            if (fileExtension !== 'xlsx' && fileExtension !== 'xls') {
+                console.error('❌ 无效的文件格式：', fileExtension);
+                alert('请上传xlsx或xls格式的文件！');
+                return;
+            }
+            console.log('✓ 文件格式验证通过：', fileExtension);
+
+            uploadedInvestmentFile = file;
+
+            try {
+                // 解析Excel文件
+                console.log('🔄 开始解析Excel文件...');
+                const data = await file.arrayBuffer();
+                const workbook = XLSX.read(data, { type: 'array' });
+                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+
+                // 使用header:1选项将数据解析为二维数组，避免SheetJS自动识别标题行的问题
+                const arrayData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                console.log('✓ Excel文件解析成功，共', arrayData.length, '行数据');
+
+                // 检查数据行数
+                if (arrayData.length < 2) {
+                    console.error('❌ 文件数据不足，至少需要包含标题行和一行数据');
+                    alert('文件数据不足！请确保文件包含标题行和至少一行数据。\n\n格式要求：\n- 第一列：18位项目代码\n- 第二列：本月新增建安\n- 第三列：本月新增设备工器具\n- 第四列：本月新增其他\n- 第一行为标题行');
+                    return;
+                }
+
+                // 清空之前的数据
+                investmentData.clear();
+
+                // 提取项目代码和三个投资额指标
+                console.log('📊 [投资额上传] 开始提取项目代码和投资额指标...');
+                let validCount = 0;
+                let invalidCount = 0;
+
+                arrayData.forEach((row, index) => {
+                    // 跳过标题行
+                    if (index === 0) {
+                        console.log('📋 [投资额上传] 跳过标题行：', JSON.stringify(row));
+                        return;
+                    }
+
+                    // 获取四列数据：项目代码、本月新增建安、本月新增设备工器具、本月新增其他
+                    // 允许某些列为空，将在后续处理中转换为0
+                    const projectCode = row[0]?.toString().trim();
+                    const jiananStr = row[1];
+                    const shebeiStr = row[2];
+                    const qitaStr = row[3];
+
+                    const jianan = parseFloat(jiananStr);
+                    const shebei = parseFloat(shebeiStr);
+                    const qita = parseFloat(qitaStr);
+
+                    // 验证项目代码
+                    if (!projectCode) {
+                        invalidCount++;
+                        console.warn(`⚠️ [投资额上传] 第${index + 1}行项目代码为空：`, JSON.stringify(row));
+                        return;
+                    }
+
+                    if (projectCode.length !== 18) {
+                        invalidCount++;
+                        console.warn(`⚠️ [投资额上传] 第${index + 1}行项目代码长度错误（应为18位）：${projectCode}`);
+                        return;
+                    }
+
+                    // 验证三个投资额指标（允许为空，为空时视为0）
+                    const validJianan = isNaN(jianan) ? 0 : jianan;
+                    const validShebei = isNaN(shebei) ? 0 : shebei;
+                    const validQita = isNaN(qita) ? 0 : qita;
+
+                    // 数据有效，添加到映射
+                    investmentData.set(projectCode, {
+                        jianan: validJianan,
+                        shebei: validShebei,
+                        qita: validQita
+                    });
+                    validCount++;
+                    console.log(`✅ [投资额上传] 第${index + 1}行：项目代码=${projectCode}, 建安=${validJianan}万元, 设备=${validShebei}万元, 其他=${validQita}万元`);
+                });
+
+                console.log(`📈 [投资额上传] 数据提取完成：有效数据 ${validCount} 条，无效数据 ${invalidCount} 条`);
+
+                // 检查有效数据数量
+                if (validCount === 0) {
+                    console.error('❌ [投资额上传] 未提取到有效数据，请检查文件格式是否正确');
+                    alert('未提取到有效数据！请检查文件格式是否符合要求：\n\n1. 文件格式：.xlsx 或 .xls\n2. 第一列：18位项目代码\n3. 第二列：本月新增建安\n4. 第三列：本月新增设备工器具\n5. 第四列：本月新增其他\n6. 第一行为标题行\n\n示例：\n项目代码            本月新增建安  本月新增设备工器具  本月新增其他\nMA4F0WYH0420582003  5000        2000              1000');
+                    return;
+                }
+
+                console.log('🗄️ [投资额上传] 最终投资数据：', Object.fromEntries(investmentData));
+
+                updateStatus(`已上传投资额文件，解析到 ${investmentData.size} 个项目（有效：${validCount}条，无效：${invalidCount}条）`);
+
+                // 启用筛选按钮（调用更新函数）
+                updateFilterButtonStatus();
+                const filterBtn = document.getElementById('filterFiles');
+                console.log('🔘 [投资额上传] 筛选按钮状态：', filterBtn.disabled ? '禁用' : '启用');
+
+                console.log('📋 [投资额上传] === 投资额文件上传完成 ===');
+            } catch (error) {
+                console.error('❌ [投资额上传] 解析投资额文件错误：', error);
+                updateStatus(`解析投资额文件错误：${error.message}`);
+                alert('解析文件失败：' + error.message + '\n\n请确保文件格式正确：\n1. 文件格式：.xlsx 或 .xls\n2. 第一列：18位项目代码\n3. 第二列：本月新增建安\n4. 第三列：本月新增设备工器具\n5. 第四列：本月新增其他\n6. 第一行为标题行');
+            }
+        });
+
+        // 输入框事件处理
+        function updateFilterButtonStatus() {
+            const investmentValue = document.getElementById('investmentValue').value;
+            const filterBtn = document.getElementById('filterFiles');
+
+            // 检查数值是否已输入，且投资数据已加载
+            filterBtn.disabled = !investmentValue || investmentData.size === 0;
+
+            // 更新生成列表按钮状态
+            updateRegenerateButtonStatus();
+        }
+
+        // 为输入框添加事件监听器
+        document.getElementById('investmentValue').addEventListener('input', updateFilterButtonStatus);
+
+        // 添加生成列表按钮事件监听器
+        document.getElementById('regenerateList').addEventListener('click', regenerateProjectList);
+
+        // 添加生成解锁公式按钮事件监听器
+        document.getElementById('generateUnlockFormula').addEventListener('click', async () => {
+            console.log('📋 [解锁公式] === 开始生成解锁公式 ===');
+
+            if (investmentData.size === 0) {
+                console.warn('⚠ [解锁公式] 未上传投资额文件或未解析到数据');
+                alert('请先上传投资额文件！');
+                return;
+            }
+
+            // 生成解锁公式数据
+            const unlockFormulaData = [];
+            unlockFormulaData.push(['项目代码', '解锁公式']);
+
+            investmentData.forEach((data, projectCode) => {
+                const { jianan, shebei, qita } = data;
+                const total = jianan + shebei + qita;
+
+                // 生成解锁公式
+                const unlockItems = [];
+                if (total >= 10000) unlockItems.push('B42001');
+                if (jianan >= 5000) unlockItems.push('B42002');
+                if (shebei >= 5000) unlockItems.push('B42003');
+                if (qita >= 5000) unlockItems.push('B42004');
+
+                const formula = unlockItems.join('、');
+
+                // 只有当公式不为空时才添加到结果中
+                if (formula) {
+                    unlockFormulaData.push([projectCode, formula]);
+                    console.log(`✅ [解锁公式] 项目 ${projectCode} 生成公式：${formula}`);
+                } else {
+                    console.log(`⏭️ [解锁公式] 项目 ${projectCode} 未生成公式，跳过`);
+                }
+            });
+
+            console.log('📊 [解锁公式] 生成解锁公式数据：', unlockFormulaData);
+
+            // 生成Excel文件
+            const ws = XLSX.utils.aoa_to_sheet(unlockFormulaData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, '解锁公式');
+
+            // 下载Excel文件
+            const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+            const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = '解锁公式.xlsx';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            console.log('✅ [解锁公式] 解锁公式生成完成');
+        });
+
+        // 更新生成解锁公式按钮状态
+        function updateGenerateUnlockFormulaButtonStatus() {
+            const generateBtn = document.getElementById('generateUnlockFormula');
+            generateBtn.disabled = investmentData.size === 0;
+        }
+
+        // 修改updateFilterButtonStatus函数，同时更新生成解锁公式按钮状态
+        const originalUpdateFilterButtonStatus = updateFilterButtonStatus;
+        updateFilterButtonStatus = function () {
+            originalUpdateFilterButtonStatus();
+            updateGenerateUnlockFormulaButtonStatus();
+        };
+
+        // 更新生成列表按钮状态
+        function updateRegenerateButtonStatus() {
+            const regenerateBtn = document.getElementById('regenerateList');
+            // 只要选择了目录且输出文件夹存在，就可以生成列表
+            regenerateBtn.disabled = !rootDirectoryHandle;
+        }
+
+        // 递归遍历目录，寻找所有符合条件的文件
+        async function searchFiles(directoryHandle, currentPath) {
+            const files = [];
+
+            for await (const entry of directoryHandle.values()) {
+                // 忽略输出文件夹
+                if (entry.name === '输出') {
+                    console.log(`⏭️ 跳过输出文件夹：${currentPath}/${entry.name}`);
+                    continue;
+                }
+
+                const fullPath = currentPath ? `${currentPath}/${entry.name}` : entry.name;
+
+                if (entry.kind === 'directory') {
+                    // 递归处理子目录
+                    const subFiles = await searchFiles(entry, fullPath);
+                    files.push(...subFiles);
+                } else if (entry.kind === 'file') {
+                    const fileName = entry.name.toLowerCase();
+                    if (fileName.endsWith('.docx') || fileName.endsWith('.doc') || fileName.endsWith('.wps')) {
+                        files.push({
+                            handle: entry,
+                            name: entry.name,
+                            path: fullPath
+                        });
+                        console.log(`📄 找到符合条件的文件：${fullPath}`);
+                    }
+                }
+            }
+
+            return files;
+        }
+
+        // 生成项目文件列表函数
+        async function regenerateProjectList() {
+            console.log('📋 [生成列表] === 开始生成项目文件列表 ===');
+
+            if (!rootDirectoryHandle) {
+                console.error('❌ [生成列表] 未选择目录，无法生成列表');
+                updateStatus('请先选择目录！');
+                return;
+            }
+
+            try {
+                // 递归读取根目录中的所有文件，忽略输出文件夹
+                console.log('🔍 [生成列表] 递归读取根目录中的文件...');
+                const allFiles = await searchFiles(rootDirectoryHandle, '');
+                console.log(`📊 [生成列表] 共找到 ${allFiles.length} 个符合条件的文件`);
+
+                if (allFiles.length === 0) {
+                    console.warn('⚠ [生成列表] 根目录中没有符合条件的文件');
+                    updateStatus('根目录中没有符合条件的文件！');
+                    return;
+                }
+
+                updateStatus('开始生成项目文件列表...');
+
+                // 准备Excel数据，包含项目代码、项目名和文件路径（不含文件名）
+                const excelData = [];
+                excelData.push(['项目代码', '项目名', '原文件位置']);
+                console.log('📋 [生成列表] 初始化Excel数据，添加表头');
+
+                // 解析每个文件，提取项目代码、项目名称和文件路径
+                for (const fileInfo of allFiles) {
+                    const { name, path } = fileInfo;
+                    const nameWithoutExt = name.substring(0, name.lastIndexOf('.'));
+                    const projectCode = nameWithoutExt.substring(0, 18);
+                    const projectName = nameWithoutExt.substring(18);
+
+                    // 提取文件路径（不含文件名）
+                    const filePath = path.substring(0, path.lastIndexOf('/')) || '';
+
+                    console.log(`📄 [生成列表] 解析文件：${path}`);
+                    console.log(`   [生成列表] 项目代码：${projectCode}`);
+                    console.log(`   [生成列表] 项目名称：${projectName}`);
+                    console.log(`   [生成列表] 文件路径：${filePath}`);
+
+                    // 添加到Excel数据，包含项目代码、项目名和文件路径（不含文件名）
+                    excelData.push([projectCode, projectName, filePath]);
+                }
+
+                // 生成Excel文件
+                console.log('📈 开始生成Excel文件...');
+                const ws = XLSX.utils.aoa_to_sheet(excelData);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, '项目文件列表');
+                console.log('✓ Excel工作表创建完成，包含', excelData.length, '行数据');
+
+                // 生成Excel文件的二进制数据
+                const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+                const excelBlob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                console.log('✓ Excel文件二进制数据生成完成，大小：', excelBlob.size, '字节');
+
+                // 通过浏览器下载Excel文件
+                console.log('📤 [生成列表] 开始下载Excel文件...');
+                const url = URL.createObjectURL(excelBlob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = '项目文件列表.xlsx';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                console.log('✅ [生成列表] Excel文件下载完成：项目文件列表.xlsx');
+
+                updateStatus(`<span style="color: #48bb78;">生成列表完成！</span> 共处理 ${allFiles.length} 个文件，已生成并下载Excel文件`);
+                console.log(`🎉 [生成列表] 生成列表完成！共处理 ${allFiles.length} 个文件`);
+
+            } catch (error) {
+                console.error('❌ 生成列表错误：', error);
+                let errorMessage = `生成列表错误：${error.message}`;
+                let solutions = '<br><br>解决方案：<br>1. 请确保"输出"文件夹已存在<br>2. 请确保您有权限写入该目录<br>3. 请确保目录未被其他程序占用';
+
+                if (error.name === 'NotFoundError') {
+                    errorMessage = '<span style="color: #f56565;">生成列表错误：未找到"输出"文件夹</span>';
+                    solutions = '<br><br>解决方案：<br>1. 请先选择目录并处理文件，生成"输出"文件夹<br>2. 确保您已完成文件处理步骤';
+                }
+
+                updateStatus(errorMessage + solutions);
+                alert('生成列表失败：' + error.message);
+            }
+        }
+
+        document.getElementById('selectDir').addEventListener('click', async () => {
+            try {
+                console.log('=== 开始选择目录 ===');
+                const handle = await window.showDirectoryPicker();
+                rootDirectoryHandle = handle;
+                selectedDirectory = handle.name;
+                selectedFiles = [];
+                console.log('✓ 成功选择目录：', selectedDirectory);
+
+                await processDirectory(handle, '');
+                console.log('✓ 文件扫描完成，找到', selectedFiles.length, '个符合条件的文件');
+                console.log('📋 找到的文件列表：', selectedFiles.map(f => f.name));
+
+                // 检测"输出"文件夹是否存在
+                try {
+                    console.log('🔍 检测"输出"文件夹是否存在...');
+                    await handle.getDirectoryHandle('输出');
+                    console.log('⚠ "输出"文件夹已存在');
+                    // 文件夹存在，询问用户是否删除
+                    const confirmDelete = confirm('"输出"文件夹已存在，是否删除并重新创建？');
+                    if (confirmDelete) {
+                        // 删除现有文件夹及其内容
+                        console.log('🗑️ 删除现有"输出"文件夹...');
+                        await handle.removeEntry('输出', { recursive: true });
+                        console.log('✓ 已删除旧的"输出"文件夹');
+                        updateStatus(`已删除旧的"输出"文件夹，已找到 ${selectedFiles.length} 个符合条件的文件`);
+                    } else {
+                        console.log('⚠ 用户取消删除"输出"文件夹');
+                        updateStatus(`已找到 ${selectedFiles.length} 个符合条件的文件，"输出"文件夹已存在`);
+                    }
+                } catch (error) {
+                    // 文件夹不存在，正常提示
+                    console.log('✓ "输出"文件夹不存在，将在处理时创建');
+                    updateStatus(`已找到 ${selectedFiles.length} 个符合条件的文件`);
+                }
+
+                displayFiles();
+                document.getElementById('processFiles').disabled = selectedFiles.length === 0;
+                // 更新生成列表按钮状态
+                updateRegenerateButtonStatus();
+                console.log('=== 目录选择和文件扫描完成 ===');
+            } catch (error) {
+                console.error('❌ 目录选择或文件扫描错误：', error);
+                updateStatus(`<span style="color: #f56565;">错误：${error.message}</span><br><br>解决方案：<br>1. 请确保您有权限访问该目录<br>2. 请确保浏览器支持文件系统访问API<br>3. 尝试重新选择目录`);
+            }
+        });
+
+        /**
+         * 递归处理目录，查找所有符合条件的文件
+         * @param {FileSystemDirectoryHandle} directoryHandle - 当前目录句柄
+         * @param {string} currentPath - 当前目录的相对路径
+         * @returns {Promise<void>} - 无返回值
+         */
+        async function processDirectory(directoryHandle, currentPath) {
+            // 遍历目录中的所有条目
+            for await (const entry of directoryHandle.values()) {
+                // 跳过所有以"结构"开头的文件夹，避免重复处理
+                if (entry.name.startsWith('结构')) {
+                    continue;
+                }
+
+                // 构建完整的相对路径
+                const fullPath = currentPath ? `${currentPath}/${entry.name}` : entry.name;
+
+                // 如果是子目录，递归处理
+                if (entry.kind === 'directory') {
+                    await processDirectory(entry, fullPath);
+                }
+                // 如果是文件，检查是否为目标文件类型（.docx, .doc, .wps）
+                else if (entry.kind === 'file') {
+                    const fileName = entry.name.toLowerCase();
+                    if (fileName.endsWith('.docx') || fileName.endsWith('.doc') || fileName.endsWith('.wps')) {
+                        // 添加到选中文件列表
+                        selectedFiles.push({
+                            handle: entry,
+                            name: entry.name,
+                            path: fullPath
+                        });
+                    }
+                }
+            }
+        }
+
+        function displayFiles() {
+            const fileList = document.getElementById('fileList');
+            fileList.innerHTML = '';
+
+            if (selectedFiles.length === 0) {
+                fileList.innerHTML = '<div class="file-item">未找到符合条件的文件</div>';
+                return;
+            }
+
+            selectedFiles.forEach(file => {
+                const div = document.createElement('div');
+                div.className = 'file-item';
+                div.textContent = file.path;
+                fileList.appendChild(div);
+            });
+        }
+
+        /**
+         * 更新页面状态信息
+         * @param {string} message - 要显示的状态信息，可以包含HTML标签
+         */
+        function updateStatus(message) {
+            const statusElement = document.getElementById('status');
+            statusElement.innerHTML = `<strong>${message}</strong>`;
+        }
+
+        /**
+         * 筛选按钮事件处理函数
+         * 功能：按投资额条件筛选文件，并将符合条件的文件移动到相应的条件文件夹
+         * 筛选逻辑：
+         * 1. 验证输入的投资额是否有效
+         * 2. 检查条件文件夹是否存在
+         * 3. 若文件夹存在，将其内的所有文件移动到输出文件夹
+         * 4. 筛选输出文件夹中的所有文件
+         * 5. 将符合条件的文件移动到条件文件夹
+         * 6. 显示筛选结果
+         */
+        document.getElementById('filterFiles').addEventListener('click', async () => {
+            console.log('📋 [筛选] === 开始按投资额条件筛选文件 ===');
+            if (selectedFiles.length === 0) {
+                console.log('⚠ [筛选] 未选择文件，无法筛选');
+                updateStatus('请先选择目录并处理文件！');
+                return;
+            }
+
+            // 获取输入值
+            const investmentValueStr = document.getElementById('investmentValue').value;
+
+            // 转换为数值
+            const investmentValue = parseFloat(investmentValueStr);
+
+            // 校验输入有效性
+            if (isNaN(investmentValue)) {
+                console.error('❌ 无效的投资额：', investmentValue);
+                alert('请输入有效的投资额！');
+                return;
+            }
+
+            // 校验数值不为负数
+            if (investmentValue < 0) {
+                console.error('❌ 无效的投资额：投资额不能为负数', investmentValue);
+                alert('无效的投资额！投资额不能为负数。');
+                return;
+            }
+
+            console.log(`🎯 筛选条件：大于等于 ${investmentValue}万元`);
+            updateStatus('开始按投资额条件筛选文件...');
+
+            // 禁用筛选按钮
+            const filterBtn = document.getElementById('filterFiles');
+            filterBtn.disabled = true;
+            console.log('🔘 筛选按钮已禁用');
+
+            try {
+                // 获取输出文件夹句柄
+                console.log('📁 获取输出文件夹句柄...');
+                let outputDirHandle;
+                try {
+                    outputDirHandle = await rootDirectoryHandle.getDirectoryHandle('输出');
+                    console.log('✓ 成功获取输出文件夹句柄');
+                } catch (error) {
+                    console.error('❌ 未找到"输出"文件夹：', error);
+                    alert('筛选失败：未找到"输出"文件夹！\n\n请先选择目录并处理文件，生成"输出"文件夹后再进行筛选操作。');
+                    updateStatus('筛选失败：未找到"输出"文件夹');
+                    filterBtn.disabled = false;
+                    return;
+                }
+
+                // 生成条件文件夹名称，固定为大于等于
+                let folderName = `结构超${investmentValue}`;
+
+                let conditionFolderHandle;
+                console.log(`📁 准备在输出文件夹内创建条件文件夹：${folderName}`);
+
+                // 检测文件夹是否存在
+                try {
+                    console.log(`🔍 检测输出文件夹内"${folderName}"文件夹是否存在...`);
+                    conditionFolderHandle = await outputDirHandle.getDirectoryHandle(folderName);
+                    console.log(`⚠ 输出文件夹内"${folderName}"文件夹已存在`);
+
+                    // 文件夹存在，将其内的所有文件移动到上一级文件夹（输出文件夹）
+                    console.log(`📤 开始将"${folderName}"文件夹内的文件移动到输出文件夹...`);
+                    let movedFileCount = 0;
+
+                    // 遍历条件文件夹内的所有文件
+                    for await (const entry of conditionFolderHandle.values()) {
+                        if (entry.kind === 'file') {
+                            try {
+                                // 获取源文件句柄
+                                const sourceFileHandle = await conditionFolderHandle.getFileHandle(entry.name);
+                                // 在输出文件夹中创建目标文件
+                                const destFileHandle = await outputDirHandle.getFileHandle(entry.name, { create: true });
+                                // 获取可写流并写入文件
+                                const sourceFile = await sourceFileHandle.getFile();
+                                const destWritable = await destFileHandle.createWritable();
+                                await destWritable.write(await sourceFile.arrayBuffer());
+                                await destWritable.close();
+                                // 删除源文件
+                                await conditionFolderHandle.removeEntry(entry.name);
+                                movedFileCount++;
+                                console.log(`📄 已将"${entry.name}"从"${folderName}"移动到输出文件夹`);
+                            } catch (error) {
+                                console.error(`❌ 移动文件"${entry.name}"失败：`, error);
+                            }
+                        }
+                    }
+
+                    console.log(`✓ 共将${movedFileCount}个文件从"${folderName}"移动到输出文件夹`);
+
+                } catch (error) {
+                    // 文件夹不存在，直接创建
+                    console.log(`📁 输出文件夹内"${folderName}"文件夹不存在，直接创建...`);
+                    conditionFolderHandle = await outputDirHandle.getDirectoryHandle(folderName, { create: true });
+                    console.log(`✓ 成功创建"${folderName}"文件夹`);
+                }
+
+                // 获取输出文件夹中的所有文件
+                console.log('📋 读取输出文件夹中的文件...');
+                const outputFiles = [];
+                for await (const entry of outputDirHandle.values()) {
+                    if (entry.kind === 'directory') {
+                        // 跳过所有以"结构"开头的文件夹（包括结构超、结构[、结构(等）
+                        if (entry.name.startsWith('结构')) {
+                            console.log(`⏭️ 跳过输出文件夹内的"${entry.name}"文件夹`);
+                            continue;
+                        }
+                    } else if (entry.kind === 'file') {
+                        // 只处理docx、doc、wps文件
+                        const fileName = entry.name.toLowerCase();
+                        if (fileName.endsWith('.docx') || fileName.endsWith('.doc') || fileName.endsWith('.wps')) {
+                            outputFiles.push(entry);
+                            console.log(`📄 找到符合条件的文件：${entry.name}`);
+                        } else {
+                            console.log(`⏭️ 跳过非目标文件：${entry.name}`);
+                        }
+                    }
+                }
+                console.log(`📊 共找到 ${outputFiles.length} 个文件待筛选`);
+
+                // 筛选并移动文件
+                console.log('🔄 开始筛选并移动文件...');
+                let movedCount = 0;
+                for (const fileHandle of outputFiles) {
+                    // 解析文件名，获取项目代码
+                    const fileName = fileHandle.name;
+                    const nameWithoutExt = fileName.substring(0, fileName.lastIndexOf('.'));
+                    const projectCode = nameWithoutExt.substring(0, 18);
+                    console.log(`🔍 解析文件：${fileName}`);
+                    console.log(`   项目代码：${projectCode}`);
+
+                    // 查找投资额数据（包含三个指标）
+                    const investmentDataItem = investmentData.get(projectCode);
+                    if (!investmentDataItem) {
+                        console.log(`   未找到对应投资额数据，跳过文件`);
+                        continue;
+                    }
+
+                    console.log(`   对应投资额数据：建安=${investmentDataItem.jianan}万元, 设备=${investmentDataItem.shebei}万元, 其他=${investmentDataItem.qita}万元`);
+
+                    // 判断三个指标中的任何一个是否符合条件
+                    let isMatch = false;
+
+                    // 定义条件判断函数，固定为大于等于
+                    const checkCondition = (value) => {
+                        return value >= investmentValue;
+                    };
+
+                    // 检查三个指标中的任何一个是否符合条件
+                    isMatch = checkCondition(investmentDataItem.jianan) ||
+                        checkCondition(investmentDataItem.shebei) ||
+                        checkCondition(investmentDataItem.qita);
+
+                    console.log(`   条件类型：大于等于`);
+                    console.log(`   条件值：${investmentValue}万元`);
+                    console.log(`   是否符合条件：${isMatch ? '是' : '否'}`);
+
+                    // 如果符合条件，则移动文件
+                    if (isMatch) {
+                        console.log(`✅ 符合条件，移动文件：${fileName} -> ${folderName}/${fileName}`);
+                        // 读取源文件内容
+                        const sourceFile = await fileHandle.getFile();
+
+                        // 写入到目标文件夹
+                        const destinationFile = await conditionFolderHandle.getFileHandle(fileName, { create: true });
+                        const writable = await destinationFile.createWritable();
+                        await writable.write(await sourceFile.arrayBuffer());
+                        await writable.close();
+
+                        // 删除源文件（移动操作）
+                        await outputDirHandle.removeEntry(fileName);
+                        console.log(`✓ 文件移动完成：${fileName}`);
+                        movedCount++;
+                    } else {
+                        console.log(`⏭️ 不符合条件，跳过文件：${fileName}`);
+                    }
+                }
+                console.log(`🎉 筛选完成，共移动 ${movedCount} 个文件`);
+
+                // 生成条件描述文本，固定为大于等于
+                let conditionDescription = `大于等于 ${investmentValue} 万元`;
+
+                updateStatus(`筛选完成！共筛选出 <span style="color: #48bb78; font-weight: bold;">${movedCount}</span> 个指标符合条件的项目文件，已从"输出"文件夹内移动到"输出/${folderName}"文件夹`);
+                console.log('💬 显示筛选完成提示信息');
+
+            } catch (error) {
+                console.error('❌ 筛选错误：', error);
+                let errorMessage = `筛选错误：${error.message}`;
+                let solutions = '<br><br>解决方案：<br>1. 请确保"输出"文件夹已存在<br>2. 请确保您有权限写入该目录<br>3. 请确保目录未被其他程序占用<br>4. 检查文件是否被其他程序锁定';
+
+                if (error.name === 'NotFoundError') {
+                    errorMessage = '<span style="color: #f56565;">筛选错误：未找到"输出"文件夹</span>';
+                    solutions = '<br><br>解决方案：<br>1. 请先选择目录并处理文件，生成"输出"文件夹<br>2. 确保您已完成文件处理步骤';
+                }
+
+                updateStatus(errorMessage + solutions);
+                alert('筛选失败：' + error.message);
+            } finally {
+                // 启用筛选按钮
+                const filterBtn = document.getElementById('filterFiles');
+                filterBtn.disabled = false;
+                console.log('🔘 筛选按钮已启用');
+                console.log('=== 筛选流程结束 ===');
+            }
+        });
+
+        document.getElementById('processFiles').addEventListener('click', async () => {
+            console.log('=== 开始复制文件 ===');
+            if (selectedFiles.length === 0) {
+                console.log('⚠ 没有文件需要复制');
+                updateStatus('没有文件需要复制');
+                return;
+            }
+
+            updateStatus('开始复制文件...');
+
+            // 只禁用复制文件按钮，避免重复点击
+            const processFilesBtn = document.getElementById('processFiles');
+            processFilesBtn.disabled = true;
+            console.log('🔘 复制文件按钮已禁用');
+
+            // 显示进度条
+            const progressContainer = document.getElementById('progressContainer');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            progressContainer.style.display = 'block';
+            console.log('📊 进度条已显示');
+
+            try {
+                // 创建"输出"文件夹
+                console.log('📁 创建"输出"文件夹...');
+                const outputDirHandle = await rootDirectoryHandle.getDirectoryHandle('输出', { create: true });
+                console.log('✓ 成功创建"输出"文件夹');
+
+                // 处理每个文件
+                const totalFiles = selectedFiles.length;
+                console.log(`📦 开始复制 ${totalFiles} 个文件...`);
+
+                for (let i = 0; i < totalFiles; i++) {
+                    const file = selectedFiles[i];
+
+                    // 更新进度
+                    const progress = ((i + 1) / totalFiles) * 100;
+                    const roundedProgress = Math.round(progress);
+                    progressFill.style.width = `${progress}%`;
+                    progressPercentage.textContent = `${roundedProgress}%`;
+                    progressText.textContent = `复制中：${i + 1}/${totalFiles}`;
+                    console.log(`🔄 复制进度：${roundedProgress}% (${i + 1}/${totalFiles})`);
+
+                    // 复制文件到"输出"文件夹
+                    console.log(`📋 复制文件：${file.name} -> 输出/${file.name}`);
+                    const sourceFile = await file.handle.getFile();
+                    const destinationFile = await outputDirHandle.getFileHandle(file.name, { create: true });
+                    const writable = await destinationFile.createWritable();
+                    await writable.write(await sourceFile.arrayBuffer());
+                    await writable.close();
+                    console.log(`✓ 文件复制完成：${file.name}`);
+                }
+
+                updateStatus(`复制完成！共复制 ${selectedFiles.length} 个文件到"输出"文件夹`);
+                console.log(`🎉 文件复制完成！共复制 ${selectedFiles.length} 个文件`);
+
+            } catch (error) {
+                console.error('❌ 文件复制错误：', error);
+                updateStatus(`<span style="color: #f56565;">复制错误：${error.message}</span><br><br>解决方案：<br>1. 请确保您有权限写入该目录<br>2. 请确保目录未被其他程序占用<br>3. 尝试关闭浏览器并重新打开<br>4. 检查文件是否被其他程序锁定`);
+                // 错误情况下恢复处理文件按钮状态
+                const processFilesBtn = document.getElementById('processFiles');
+                processFilesBtn.disabled = false;
+                console.log('🔘 复制文件按钮已启用（错误恢复）');
+            } finally {
+                // 恢复处理文件按钮状态
+                const processFilesBtn = document.getElementById('processFiles');
+                processFilesBtn.disabled = false;
+                console.log('🔘 复制文件按钮已启用');
+                // 隐藏进度条
+                setTimeout(() => {
+                    document.getElementById('progressContainer').style.display = 'none';
+                    console.log('📊 进度条已隐藏');
+                }, 1000);
+                console.log('=== 文件复制流程结束 ===');
+            }
+        });
+    </script>
+    <footer
+        style="text-align: center; padding: 20px; margin-top: 30px; color: #ffffff; font-size: 14px; border-top: 1px solid #e5e7eb;">
+        <p>hanj-cn@qq.com \ v1.0 \ 20251226</p>
+    </footer>
+</body>
+
+</html>
